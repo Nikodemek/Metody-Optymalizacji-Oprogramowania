@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from enum import Enum
+from typing import Dict, Callable
 
 
 class InputType(Enum):
@@ -60,7 +61,10 @@ class TaskInput:
     self.default_value = default_value
 
 
-def initialize_app(title: str, inputs: list[TaskInput], apply):
+def initialize_app(
+    title: str,
+    inputs: list[TaskInput],
+    apply: Callable[[Dict[str, Callable]], None]):
   window = tk.Tk()
   window.title("Metody Optymalizacji Oprogramowania")
   window.geometry("500x500")
