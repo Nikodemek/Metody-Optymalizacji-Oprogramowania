@@ -30,7 +30,7 @@ class ValidatedEntry(tk.Entry):
       textvariable=self.variable,
       validate='focus',
       validatecommand=self.check,
-      **kwargs
+      **kwargs,
     )
 
   def check(self, *args) -> bool:
@@ -46,16 +46,21 @@ class ValidatedEntry(tk.Entry):
       case _:
         raise ValueError('Invalid input')
 
+    if not is_valid:
+      self.variable.set(self.default_value)
+
     return is_valid
 
 
 class TaskInput:
   def __init__(
       self,
+      identifier: str,
       label: str,
       input_type: InputType,
       default_value
   ):
+    self.identifier = identifier
     self.label = label
     self.input_type = input_type
     self.default_value = default_value
@@ -64,7 +69,8 @@ class TaskInput:
 def initialize_app(
     title: str,
     inputs: list[TaskInput],
-    apply: Callable[[Dict[str, Callable]], None]):
+    apply: Callable[[Dict[str, Callable]], None]
+):
   window = tk.Tk()
   window.title("Metody Optymalizacji Oprogramowania")
   window.geometry("500x500")
@@ -74,7 +80,7 @@ def initialize_app(
     text=f'Metody Optymalizacji\n{title}',
     justify=tk.CENTER,
     font=("Arial", 20, "bold"),
-    padding=10
+    padding=10,
   )
   title_label.pack()
 
@@ -98,7 +104,7 @@ def initialize_app(
       font=("Arial", 12, "normal"),
     )
 
-    value_getters.update({input.label: input_entry.get})
+    value_getters.update({input.identifier: input_entry.get})
 
     input_entry.pack(side=tk.RIGHT, padx=5, pady=5)
     input_label.pack(side=tk.LEFT, padx=5, pady=5)
