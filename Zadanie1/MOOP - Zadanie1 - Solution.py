@@ -208,8 +208,7 @@ def calculate(value_getters: Dict[str, Callable[[], float]]):
     (func_c, Limitation.LESS_OR_EQUAL),
   ])
   display_range = get_range_to_display(points, 0.3)
-
-  optimal_points = find_optimal(valid_points, lambda x1, x2: 3*x1 + 2*x2)
+  optimal_points = find_optimal(valid_points, utility_func)
 
   plt.figure(figsize=(8, 6))
 
