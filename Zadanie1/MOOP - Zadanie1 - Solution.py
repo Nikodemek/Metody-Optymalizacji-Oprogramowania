@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
 from enum import Enum
+from typing import Dict, Callable
 
 import matplotlib.pyplot as plt
 from Common.moop_gui import initialize_app, TaskInput, InputType
 
 class Axis(Enum):
-  X = 0
-  Y = 1
+  X = 1
+  Y = 2
 
+class Limitation(Enum):
+  LESS_OR_EQUAL = 1
+  GREATER_OR_EQUAL = 2
+  EQUAL = 3
 
 class Point2d:
   def __init__(self, x: float, y: float):
@@ -24,7 +28,7 @@ class Point2d:
     return math.sqrt(self.magnitude_from(other))
 
   def __repr__(self):
-    return f"[{self.x}, {self.y}]"
+    return f"[{self.x:.3g}, {self.y:.3g}]"
 
 class LinearFunction:
   def __init__(self, slope_a: float, slope_b: float, gen_a: float, gen_b: float, gen_c: float):
@@ -106,6 +110,34 @@ def find_all_notable_points(funcs: list[LinearFunction]) -> list[Point2d]:
 
   return points
 
+def filter_invalid_points(
+    points: list[Point2d],
+    funcs_with_limitations: list[(LinearFunction, Limitation)]
+) -> list[Point2d]:
+  valid_points: list[Point2d] = []
+
+  for point in points:
+    is_valid = False
+
+    for func, limitation in funcs_with_limitations:
+      is_valid = True
+      value_in_point = func.calculate_value(point.x)
+
+      match limitation:
+        case limitation.LESS_OR_EQUAL:
+          is_valid = point.y <= value_in_point
+        case limitation.GREATER_OR_EQUAL:
+          is_valid = point.y >= value_in_point
+        case limitation.EQUAL:
+          is_valid = point.y == value_in_point
+      if not is_valid:
+        break
+
+    if is_valid:
+      valid_points.append(point)
+
+  return valid_points
+
 def get_range_to_display(notable_points: list[Point2d], extra: float = 0.5) -> tuple[float, float]:
   if len(notable_points) == 0:
     return -5, 5
@@ -164,16 +196,20 @@ def find_optimal(notable_points: list[Point2d], utility_func: Callable[[float, f
   return [best[0] for best in best_points]
 
 
-def calculate(value_getters):
-  func_h = LinearFunction.from_general(-2, 1, 2)
-  func_c = LinearFunction.from_general(1, 2, 8)
+def calculate(value_getters: Dict[str, Callable[[], float]]):
+  vg = value_getters
+  func_h = LinearFunction.from_general(gen_a=vg['S1_H'](), gen_b=vg['S2_H'](), gen_c=vg['H_max']())
+  func_c = LinearFunction.from_general(gen_a=vg['S1_C'](), gen_b=vg['S2_C'](), gen_c=vg['C_max']())
+  utility_func = lambda x1, x2: (vg['S1_zysk']() * x1) + (vg['S2_zysk']() * x2)
 
   points = find_all_notable_points([func_h, func_c])
+  valid_points = filter_invalid_points(points, [
+    (func_h, Limitation.LESS_OR_EQUAL),
+    (func_c, Limitation.LESS_OR_EQUAL),
+  ])
   display_range = get_range_to_display(points, 0.3)
 
-  optimal_points = find_optimal(points, lambda x1, x2: 3*x1 + 2*x2)
-
-  print(optimal_points)
+  optimal_points = find_optimal(valid_points, lambda x1, x2: 3*x1 + 2*x2)
 
   plt.figure(figsize=(8, 6))
 
@@ -188,7 +224,7 @@ def calculate(value_getters):
     label=f'Optimum',
   )
   for point in optimal_points:
-    plt.text(point.x, point.y + 1, str(point), size=12, color='red')
+    plt.text(point.x, point.y + 0.7, str(point), size=12, color='red')
 
   plt.xlabel('x1')
   plt.ylabel('x2')
@@ -197,32 +233,26 @@ def calculate(value_getters):
   plt.legend()
   plt.grid()
 
+  print(
+    f'Punkty, w których rozwiązanie jest optymalne: {optimal_points}),\n'
+    f'ponieważ zysk w tych punktach wynosi kolejno {[utility_func(point.x, point.y) for point in optimal_points]}'
+  )
+
   plt.show()
 
 
-calculate({})
-
-# initialize_app(
-#   title="Zadanie 1 (zad6)",
-#   inputs = [
-#     TaskInput('S1_H', 'Wykorzystanie H przy S1', InputType.INT, -2),
-#     TaskInput('S2_H', 'Wykorzystanie C przy S2', InputType.INT, 1),
-#     TaskInput('S1_C', 'Wykorzystanie H przy S1', InputType.INT, 1),
-#     TaskInput('S2_C', 'Wykorzystanie C przy S2', InputType.INT, 2),
-#     TaskInput('S1_Zysk', 'Zysk z S1', InputType.INT, 3),
-#     TaskInput('S2_Zysk', 'Zysk z S2', InputType.INT, 2),
-#     TaskInput('H_max', 'Max zużycie H', InputType.INT, 2),
-#     TaskInput('C_max', 'Max zużycie C', InputType.INT, 8),
-#   ],
-#   apply=calculate,
-# )
-#
-# print(f'S1_H: {value_getters["S1_H"]()}')
-# print(f'S2_H: {value_getters["S2_H"]()}')
-# print(f'S1_C: {value_getters["S1_C"]()}')
-# print(f'S2_C: {value_getters["S2_C"]()}')
-# print(f'S1_Zysk: {value_getters["S1_Zysk"]()}')
-# print(f'S2_Zysk: {value_getters["S2_Zysk"]()}')
-# print(f'H_max: {value_getters["H_max"]()}')
-# print(f'C_max: {value_getters["C_max"]()}')
+initialize_app(
+  title="Zadanie 1 (zad6)",
+  inputs = [
+    TaskInput('S1_H', 'Wykorzystanie H przy S1', InputType.INT, -2),
+    TaskInput('S2_H', 'Wykorzystanie H przy S2', InputType.INT, 1),
+    TaskInput('S1_C', 'Wykorzystanie C przy S1', InputType.INT, 1),
+    TaskInput('S2_C', 'Wykorzystanie C przy S2', InputType.INT, 2),
+    TaskInput('S1_zysk', 'Zysk z S1', InputType.INT, 3),
+    TaskInput('S2_zysk', 'Zysk z S2', InputType.INT, 2),
+    TaskInput('H_max', 'Max zużycie H', InputType.INT, 2),
+    TaskInput('C_max', 'Max zużycie C', InputType.INT, 8),
+  ],
+  apply=calculate,
+)
 
