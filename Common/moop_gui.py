@@ -2,13 +2,12 @@ import tkinter as tk
 from tkinter import ttk
 from enum import Enum
 from typing import Dict, Callable
-from unittest import case
 
 
 class InputType(Enum):
-  STRING = '',
-  INT = 0,
-  FLOAT = 0.0,
+  STRING = 0,
+  INT = 1,
+  FLOAT = 2,
 
 type InputTypes = int | float | str
 
@@ -20,7 +19,7 @@ class ValidatedEntry(tk.Entry):
       value: InputTypes | None = 0,
       **kwargs,
   ):
-    self.default_value = input_type.value[0] if value is None else value
+    self.default_value = value
     self.variable = tk.StringVar(value=str(self.default_value))
     self.input_type = input_type
 
